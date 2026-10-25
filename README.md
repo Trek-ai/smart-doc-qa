@@ -32,10 +32,10 @@
 ```powershell
 cd source
 npm install
-copy .env.example .env.local
-# 打开 .env.local，把 DEEPSEEK_API_KEY 填上（唯一必填项）
-npm run dev            # 开发模式 http://localhost:3000
+npm run dev            # 打开 http://localhost:3000，点右上角 ⚙ 填密钥即可
 ```
+
+密钥两种填法任选：页面上 ⚙ 填（推荐，存浏览器本地，不用改任何文件）；或 `copy .env.example .env.local` 后在文件里填（开发者常驻用法）。
 
 生产模式：
 
@@ -48,7 +48,7 @@ npm start              # 或 node server.mjs --prod --port 3111
 
 | 变量 | 必填 | 说明 |
 |---|---|---|
-| `DEEPSEEK_API_KEY` | 是 | 生成模型密钥 |
+| `DEEPSEEK_API_KEY` | 否 | 生成模型密钥；也可在页面 ⚙ 里填（页面填写优先） |
 | `DEEPSEEK_BASE_URL` | 否 | 默认官方地址，兼容接口可改 |
 | `DEEPSEEK_MODEL` | 否 | 填**接口模型 id**（如 `deepseek-v4.1-flash`），不是控制台显示名 |
 | `LLM_CHAT_THINKING` | 否 | `off` 关闭思考模式，首字更快 |
@@ -62,15 +62,15 @@ npm start              # 或 node server.mjs --prod --port 3111
 git clone https://github.com/Trek-ai/smart-doc-qa
 cd smart-doc-qa\source
 npm install
-copy .env.example .env.local    # 填入 DeepSeek API Key（唯一必填项）
 npm run dev                     # 打开 http://localhost:3000
 ```
 
+点右上角 **⚙**，粘贴 DeepSeek API Key 保存（API 地址默认 DeepSeek 官方，可改成任何 OpenAI 兼容接口）；
 然后上传 `samples\sample-table.docx`，问「服务器采购这一项的金额和负责人分别是什么？」，
 回答应出现 **128.5 万元 / 张伟** 并带角标 **[1]**；点角标可看到第 1 页原文与高亮命中词。
 更多推荐问题见 `samples/README.md`。
 
-> **关于密钥**：评审如暂无密钥，可先观看 `deliverable/demo-video.mp4` 演示视频；或联系团队获取临时评审密钥。为什么需要密钥、以及这和「直接用 DeepSeek 官网」有什么区别，见下一节。
+> **关于密钥**：密钥只保存在评审自己的浏览器里，不写入服务器、不进代码仓库，也不需要改任何配置文件。如暂无密钥，可先观看 `deliverable/demo-video.mp4`，或联系团队获取临时评审密钥。为什么需要密钥、以及这和「直接用 DeepSeek 官网」有什么区别，见下一节。
 
 ## 为什么需要密钥，而不是直接用 DeepSeek 官网
 

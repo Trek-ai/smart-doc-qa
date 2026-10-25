@@ -46,6 +46,11 @@ export async function POST(request: Request) {
   const docIds = Array.isArray(body.docIds) ? body.docIds : [];
   const chunks = await getStore().chunksOf(docIds);
 
+  // 页面里填的密钥/地址/模型：随请求头传入，优先于服务端环境变量
+  const overrideKey = request.headers.get('x-ds-key')?.trim() ?? '';
+  const overrideBaseUrl = request.headers.get('x-ds-base-url')?.trim() ?? '';
+  const overrideModel = request.headers.get('x-ds-model')?.trim() ?? '';
+
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const send = (event: SSEEvent) => controller.enqueue(sse(event));
@@ -75,7 +80,7 @@ export async function POST(request: Request) {
         send({ type: 'citations', items: citations });
 
         // 先把命中资料推给界面，再报告缺少密钥：这样即使生成不可用，用户也能看到检索结果
-        if (!hasChatKey()) {
+        if (!hasChatKey() && !overrideKey) {
           send({ type: 'error', message: new MissingKeyError().message });
           return;
         }
@@ -93,7 +98,12 @@ export async function POST(request: Request) {
 
         const filter = createCitationFilter(citations.length);
 
-        for await (const chunk of streamChat(turns, { signal: request.signal })) {
+        for await (const chunk of streamChat(turns, {
+          signal: request.signal,
+          apiKey: overrideKey || undefined,
+          baseUrl: overrideBaseUrl || undefined,
+          model: overrideModel || undefined,
+        })) {
           const safe = filter.push(chunk.text);
           if (safe) send({ type: 'token', text: safe });
         }

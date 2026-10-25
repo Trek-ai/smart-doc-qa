@@ -76,6 +76,39 @@ export async function deleteDoc(id: string): Promise<void> {
   if (!response.ok) throw new Error(await readError(response, '删除失败'));
 }
 
+export interface LocalConfig {
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+}
+
+const LS_KEY = 'docqa.local-config';
+
+export const DEFAULT_LOCAL_CONFIG: LocalConfig = {
+  apiKey: '',
+  baseUrl: 'https://api.deepseek.com',
+  model: 'deepseek-chat',
+};
+
+/** 读取页面里填的密钥/地址；只存浏览器 localStorage，随请求发送，不落服务端 */
+export function loadLocalConfig(): LocalConfig {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return { ...DEFAULT_LOCAL_CONFIG };
+    return { ...DEFAULT_LOCAL_CONFIG, ...(JSON.parse(raw) as Partial<LocalConfig>) };
+  } catch {
+    return { ...DEFAULT_LOCAL_CONFIG };
+  }
+}
+
+export function saveLocalConfig(cfg: LocalConfig): void {
+  localStorage.setItem(LS_KEY, JSON.stringify(cfg));
+}
+
+export function clearLocalConfig(): void {
+  localStorage.removeItem(LS_KEY);
+}
+
 export interface ChatRequest {
   question: string;
   docIds: string[];
@@ -96,9 +129,15 @@ export async function streamAnswer(
   handlers: ChatHandlers,
   signal?: AbortSignal,
 ): Promise<void> {
+  const cfg = loadLocalConfig();
   const response = await fetch('/api/chat', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(cfg.apiKey ? { 'x-ds-key': cfg.apiKey } : {}),
+      ...(cfg.baseUrl ? { 'x-ds-base-url': cfg.baseUrl } : {}),
+      ...(cfg.model ? { 'x-ds-model': cfg.model } : {}),
+    },
     body: JSON.stringify(body),
     signal,
   });

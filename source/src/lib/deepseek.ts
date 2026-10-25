@@ -32,6 +32,10 @@ interface StreamOptions {
   maxTokens?: number;
   /** 外部中断信号，用户点「停止生成」时触发 */
   signal?: AbortSignal;
+  /** 请求级覆盖（页面里填的密钥/地址/模型）；缺省时退回环境变量 */
+  apiKey?: string;
+  baseUrl?: string;
+  model?: string;
 }
 
 /**
@@ -43,21 +47,24 @@ export async function* streamChat(
   turns: ChatTurn[],
   options: StreamOptions = {},
 ): AsyncGenerator<StreamChunk> {
-  const apiKey = ensureKey();
+  const apiKey = options.apiKey?.trim() || config.deepseek.apiKey;
+  if (!apiKey) throw new MissingKeyError();
+  const baseUrl = (options.baseUrl?.trim() || config.deepseek.baseUrl).replace(/\/+$/, '');
+  const model = options.model?.trim() || config.deepseek.model;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), config.requestTimeoutMs);
   const onAbort = () => controller.abort();
   options.signal?.addEventListener('abort', onAbort);
 
   try {
-    const response = await fetch(`${config.deepseek.baseUrl}/chat/completions`, {
+    const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: config.deepseek.model,
+        model,
         messages: turns,
         stream: true,
         temperature: options.temperature ?? 0.2,
