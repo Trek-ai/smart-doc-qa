@@ -5,7 +5,8 @@
 只做这一件事——**去掉**了摘要、会议纪要、导出 Word/Markdown、检索调试面板、检索评测、多会话历史、向量模型配置。
 
 ## 当前状态（2026-10-25）
-- **2026-10-25 参赛打包完成**（AI协同办公工具赛道）：git 仓库 4 条提交；README 补参赛四要素；`deliverable/technical-documentation.pdf`（10 页，7 章节+创新点）；`deliverable/demo-video.mp4`（5 分 10 秒 / 1080p / 自动配音）。代码零改动，功能与 10-23 版一致。已推送公开仓库：https://github.com/Trek-ai/smart-doc-qa 。团队：辛嘉炜 / 罗勇添 / 林俊宁（已填入 README）。参赛材料齐备，无待办。
+- **2026-10-25 参赛打包完成**（AI协同办公工具赛道）：已推送公开仓库 https://github.com/Trek-ai/smart-doc-qa 。团队：辛嘉炜 / 罗勇添 / 林俊宁。材料：README（含「为什么需要密钥」对比论证 + 示例文档 samples/）、`deliverable/technical-documentation.pdf`（10 页）、`deliverable/demo-video.mp4`（5 分 10 秒 / 1080p）。
+- **2026-10-25 新增功能：页面内填密钥**：右上角 ⚙ 设置（API Key / 地址 / 模型，存 localStorage、随请求头 `x-ds-key` 等发送、不落服务端），服务端无密钥时退回 `.env.local`。评委零配置文件即可跑通（已实测：无 env 密钥启动，请求头带密钥完整答出）。README/技术文档已同步。
 - **已交付并自测通过**（2026-10-23）：`tsc --noEmit` 无错、`npm run build` 通过、生产构建下 `tmp/e2e.mjs` 4/4 全过（自建表格 Word / 真实 WPS 旧版 .doc / 9 页 PDF），界面实拍无页面报错。
 - 解析内核整体复用 18 的成果：PDF 按坐标重排、docx 自研 OOXML 全量取文（含**表格**、文本框、页眉页脚、脚注批注）、旧版 `.doc` 直读、入口按文件头分流。
 - 检索只要本地 BM25，**不需要任何向量服务密钥**；唯一配置是 `DEEPSEEK_API_KEY`。
