@@ -72,6 +72,17 @@ npm run dev                     # 打开 http://localhost:3000
 
 > **关于密钥**：密钥只保存在评审自己的浏览器里，不写入服务器、不进代码仓库，也不需要改任何配置文件。如暂无密钥，可先观看 `deliverable/demo-video.mp4`，或联系团队获取临时评审密钥。为什么需要密钥、以及这和「直接用 DeepSeek 官网」有什么区别，见下一节。
 
+## 常见问题
+
+**Q：`npm start` 报 `Could not find a production build in the '.next' directory`？**
+生产模式必须先构建：`npm run build` 之后再 `npm start`。另外 dev 与 prod **共用 `.next` 目录**，两者不要同时跑；从 dev 切到 prod 前先重新 `npm run build`。
+
+**Q：上传了文档，但提问后回答一直不出来？**
+说明还没配密钥：点页面右上角 **⚙** 填入 DeepSeek API Key（详见上一节）。
+
+**Q：3000 端口被占用？**
+`npm run dev -- -p 3111` 换端口；或先 `taskkill /F /IM node.exe` 清掉残留进程。
+
 ## 为什么需要密钥，而不是直接用 DeepSeek 官网
 
 本系统的回答能力由 DeepSeek 大模型 API 提供，因此运行需要一个 API Key（平台免费申请、按量计费）。我们理解这给评审多了一步操作，所以先回答那个自然会有的问题——「直接去官网传文件问不就行了？」
