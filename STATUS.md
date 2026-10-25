@@ -15,6 +15,8 @@
 
 - 新增「按范围提问」：文档编号 + 点选/Ctrl 多选 + `@编号` 指定，检索按 docIds 过滤；实测范围外正确拒答，界面 0 报错；截图 `preview/ui-scope-select.png`、`ui-scope-mention.png`
 
+- 演示视频重做：HyperFrames 合成（深色高端风格 + 常驻中文字幕 + 8 段配音），5 分 29 秒 / 1080p30；`npm run check` 0 error、35/35 对比度通过；工程留在 `tmp/zhijian-video/` 可复现
+
 ## 历史（2026-10-23）
 
 从 18「知源」瘦身成独立小工具：去掉摘要/纪要/导出/检索调试/评测/多会话/向量配置，保留解析内核 + BM25 + 流式引用校验。自测 4/4 通过，详见 git log 与 README。

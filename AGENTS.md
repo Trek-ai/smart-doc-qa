@@ -5,7 +5,8 @@
 只做这一件事——**去掉**了摘要、会议纪要、导出 Word/Markdown、检索调试面板、检索评测、多会话历史、向量模型配置。
 
 ## 当前状态（2026-10-25）
-- **2026-10-25 参赛打包完成**（AI协同办公工具赛道）：已推送公开仓库 https://github.com/Trek-ai/smart-doc-qa 。团队：辛嘉炜 / 罗勇添 / 林俊宁。材料：README（零配置说明 + 示例文档 samples/）、`deliverable/technical-documentation.pdf`（11 页）、`deliverable/demo-video.mp4`（5 分 10 秒 / 1080p）。评审流程：clone → npm install → npm run dev → 打开网页即可用，**不需要任何密钥**。
+- **2026-10-25 参赛打包完成**（AI协同办公工具赛道）：已推送公开仓库 https://github.com/Trek-ai/smart-doc-qa 。团队：辛嘉炜 / 罗勇添 / 林俊宁。材料：README（零配置说明 + 示例文档 samples/）、`deliverable/technical-documentation.pdf`（11 页）、`deliverable/demo-video.mp4`（**5 分 29 秒 / 1920×1080 / 30fps / AAC 立体声**，用 HyperFrames 重新合成：深色高端风格 + 常驻中文字幕 + 8 段配音）。评审流程：clone → npm install → npm run dev → 打开网页即可用，**不需要任何密钥**。
+- **2026-10-25 重做演示视频（HyperFrames）**：按 `/hyperframes` 走完流程（用量查询返回 `status: unknown` 如实报告；`skills update` 因 GitHub manifest 不可达失败，改用已安装技能）。工程在 `tmp/zhijian-video/`（BRIEF.md / style.css / scenes.json / build-index.mjs / assets；gsap 已本地化规避网络依赖），`npm run check` 0 error、对比度 35/35 WCAG AA，渲染 9867 帧约 4 分半。产物 `deliverable/demo-video.mp4`。
 - **2026-10-25 新增：按范围提问**：左侧文档带编号，点选=只看这一份、Ctrl/⌘ 点击=多选、「全部文档」恢复默认；提问里写 `@编号` 可临时指定范围（优先级更高）。前端只把选中文档 id 发给 `/api/chat`，检索按 id 过滤，范围外内容不进上下文、引用不串档。已实测：只选表格文档→答对；只选公文 PDF→正确拒答；`@2` 指定→拒答且范围回显。技术文档已加 5.7 说明并重新生成（11 页）。
 - **2026-10-25 仅保留免密钥通道**：按需求彻底移除 DeepSeek 相关代码与配置（`lib/deepseek.ts` 已删除，改为 `lib/llm.ts`；无 `LLM_PROVIDER`、无密钥字段、无页面设置弹窗）。生成通道固定为公开免密钥 OpenAI 兼容接口，接口地址/模型名可用 `FREE_BASE_URL` / `FREE_MODEL` 替换。
 - **已交付并自测通过**（2026-10-23）：`tsc --noEmit` 无错、`npm run build` 通过、生产构建下 `tmp/e2e.mjs` 4/4 全过（自建表格 Word / 真实 WPS 旧版 .doc / 9 页 PDF），界面实拍无页面报错。
