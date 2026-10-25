@@ -1,0 +1,7 @@
+# 本地状态与中间产物，不入库
+tmp/
+source/.data/
+source/.env.local
+source/.next/
+source/node_modules/
+source/tsconfig.tsbuildinfo
