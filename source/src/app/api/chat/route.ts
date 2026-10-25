@@ -5,8 +5,7 @@
  */
 
 import type { ChatMessage, Citation, SSEEvent } from '@/lib/api';
-import { hasChatKey } from '@/lib/config';
-import { MissingKeyError, streamChat, type ChatTurn } from '@/lib/deepseek';
+import { streamChat, type ChatTurn } from '@/lib/deepseek';
 import { buildContextBlock, buildQaUserPrompt, NO_CONTEXT_ANSWER, QA_SYSTEM_PROMPT } from '@/lib/prompts';
 import { retrieve } from '@/lib/retrieve';
 import { getStore } from '@/lib/store';
@@ -49,7 +48,7 @@ export async function POST(request: Request) {
   // 页面里填的密钥/地址/模型：随请求头传入，优先于服务端环境变量
   const overrideKey = request.headers.get('x-ds-key')?.trim() ?? '';
   const overrideBaseUrl = request.headers.get('x-ds-base-url')?.trim() ?? '';
-  const overrideModel = request.headers.get('x-ds-model')?.trim() ?? '';
+  // 模型固定为 chat 模型：不接受请求头覆盖
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -79,11 +78,7 @@ export async function POST(request: Request) {
         }));
         send({ type: 'citations', items: citations });
 
-        // 先把命中资料推给界面，再报告缺少密钥：这样即使生成不可用，用户也能看到检索结果
-        if (!hasChatKey() && !overrideKey) {
-          send({ type: 'error', message: new MissingKeyError().message });
-          return;
-        }
+        // 免费模式无需密钥；若强制 deepseek 又没密钥，streamChat 会抛出 MissingKeyError 由下方统一转成错误事件
 
         const history = (body.history ?? [])
           .filter((m) => m.role === 'user' || m.role === 'assistant')
@@ -102,7 +97,6 @@ export async function POST(request: Request) {
           signal: request.signal,
           apiKey: overrideKey || undefined,
           baseUrl: overrideBaseUrl || undefined,
-          model: overrideModel || undefined,
         })) {
           const safe = filter.push(chunk.text);
           if (safe) send({ type: 'token', text: safe });

@@ -69,7 +69,9 @@ export function Workspace() {
   const [cfgOpen, setCfgOpen] = useState(false);
 
   const docs = status?.docs ?? [];
-  const hasUsableKey = Boolean(status?.hasChatKey) || Boolean(localCfg.apiKey.trim());
+  // 免费模式下无需任何密钥即可生成
+  const hasUsableKey =
+    status?.provider === 'free' || Boolean(status?.hasChatKey) || Boolean(localCfg.apiKey.trim());
 
   const refresh = useCallback(async () => {
     try {
@@ -199,7 +201,9 @@ export function Workspace() {
         </div>
         <div className="flex items-center gap-2 text-xs text-ink-soft">
           <span>
-            {status ? `${status.docs.length} 份文档 · ${status.stats.chunks} 个片段 · 模型 ${status.model}` : '正在读取…'}
+            {status
+              ? `${status.docs.length} 份文档 · ${status.stats.chunks} 个片段 · 模型 ${status.model}${status.provider === 'free' ? '（免费）' : ''}`
+              : '正在读取…'}
           </span>
           <button
             type="button"
@@ -436,7 +440,9 @@ export function Workspace() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-medium text-ink">API 设置</p>
-                <p className="mt-1 text-xs text-ink-faint">只保存在本浏览器，随请求发送；不写入服务器、不进代码仓库。</p>
+                <p className="mt-1 text-xs text-ink-faint">
+                  留空即使用内置免费模型（无需密钥）；填自己的密钥则改用 DeepSeek，仅保存在本浏览器。
+                </p>
               </div>
               <button type="button" onClick={() => setCfgOpen(false)} className="shrink-0 text-ink-faint hover:text-ink">
                 <IconClose className="h-4 w-4" />
@@ -448,7 +454,7 @@ export function Workspace() {
                 type="password"
                 value={localCfg.apiKey}
                 onChange={(event) => setLocalCfg((prev) => ({ ...prev, apiKey: event.target.value }))}
-                placeholder="sk-..."
+                placeholder="留空即使用内置评审密钥"
                 className="mt-1 w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-brand"
               />
             </label>
@@ -458,15 +464,6 @@ export function Workspace() {
                 type="text"
                 value={localCfg.baseUrl}
                 onChange={(event) => setLocalCfg((prev) => ({ ...prev, baseUrl: event.target.value }))}
-                className="mt-1 w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-brand"
-              />
-            </label>
-            <label className="mt-3 block text-xs text-ink-soft">
-              模型 ID
-              <input
-                type="text"
-                value={localCfg.model}
-                onChange={(event) => setLocalCfg((prev) => ({ ...prev, model: event.target.value }))}
                 className="mt-1 w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-brand"
               />
             </label>

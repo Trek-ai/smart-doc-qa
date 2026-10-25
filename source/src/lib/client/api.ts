@@ -9,6 +9,8 @@ export interface StatusResponse {
   docs: Doc[];
   stats: { docs: number; chunks: number };
   hasChatKey: boolean;
+  /** 当前服务商：free（免费免密钥）/ deepseek（自有密钥） */
+  provider?: string;
   model: string;
   /** 服务端实际生效的单文件上传上限 */
   uploadLimitBytes?: number;
@@ -79,7 +81,6 @@ export async function deleteDoc(id: string): Promise<void> {
 export interface LocalConfig {
   apiKey: string;
   baseUrl: string;
-  model: string;
 }
 
 const LS_KEY = 'docqa.local-config';
@@ -87,7 +88,6 @@ const LS_KEY = 'docqa.local-config';
 export const DEFAULT_LOCAL_CONFIG: LocalConfig = {
   apiKey: '',
   baseUrl: 'https://api.deepseek.com',
-  model: 'deepseek-chat',
 };
 
 /** 读取页面里填的密钥/地址；只存浏览器 localStorage，随请求发送，不落服务端 */
@@ -136,7 +136,6 @@ export async function streamAnswer(
       'Content-Type': 'application/json',
       ...(cfg.apiKey ? { 'x-ds-key': cfg.apiKey } : {}),
       ...(cfg.baseUrl ? { 'x-ds-base-url': cfg.baseUrl } : {}),
-      ...(cfg.model ? { 'x-ds-model': cfg.model } : {}),
     },
     body: JSON.stringify(body),
     signal,

@@ -47,10 +47,14 @@ export async function* streamChat(
   turns: ChatTurn[],
   options: StreamOptions = {},
 ): AsyncGenerator<StreamChunk> {
+  // 免费模式只在「既没有请求级密钥、也没有自有密钥」时生效
+  const useFree = !options.apiKey?.trim() && !config.deepseek.apiKey && config.provider === 'free';
   const apiKey = options.apiKey?.trim() || config.deepseek.apiKey;
-  if (!apiKey) throw new MissingKeyError();
-  const baseUrl = (options.baseUrl?.trim() || config.deepseek.baseUrl).replace(/\/+$/, '');
-  const model = options.model?.trim() || config.deepseek.model;
+  if (!apiKey && !useFree) throw new MissingKeyError();
+  const baseUrl = useFree
+    ? config.free.baseUrl
+    : (options.baseUrl?.trim() || config.deepseek.baseUrl).replace(/\/+$/, '');
+  const model = useFree ? config.free.model : config.deepseek.model;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), config.requestTimeoutMs);
   const onAbort = () => controller.abort();
@@ -61,7 +65,8 @@ export async function* streamChat(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+        // 免费接口不需要密钥，就不带 Authorization
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
       },
       body: JSON.stringify({
         model,

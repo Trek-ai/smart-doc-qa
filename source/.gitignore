@@ -4,7 +4,7 @@ out/
 build/
 
 # 密钥与本地数据
-.env
+# 注意：.env 已按参赛需求放行，内置评审专用密钥随仓库分发
 .env.local
 .env*.local
 .data/

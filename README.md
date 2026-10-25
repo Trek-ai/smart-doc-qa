@@ -3,7 +3,7 @@
 > 参赛作品 · 赛道：AI协同办公工具（智能文档分析平台方向）
 
 上传 Word / PDF / 文本，直接提问；回答里每条结论都带来源编号，点角标就能看到那句话在原文哪一页。
-面向「几份办公文档、问几个问题」的真实场景，本地一条命令跑起来，只需要一个大模型密钥。
+面向「几份办公文档、问几个问题」的真实场景，本地一条命令跑起来，**无需任何密钥即可使用**（内置免费文本模型）；想要更稳的生成质量，可在页面里填自己的密钥切换到 DeepSeek。
 
 ## 功能特性
 
@@ -21,21 +21,21 @@
 | 前端 | Next.js 15 + React 19 + TypeScript + Tailwind CSS 4 | 单页两栏工作台，SSE 流式渲染 |
 | 解析 | pdfjs-dist + 自研 OOXML 提取器 + word-extractor | 按文件头分流，不信任后缀 |
 | 检索 | 自研 BM25（`lib/bm25.ts`） | 同步纯函数，单文档语料 Recall@5 实测 100% |
-| 生成 | DeepSeek API（deepseek-v4.1-flash） | 唯一外部依赖，流式输出 |
+| 生成 | 双通道：免费免密钥模型（默认）/ DeepSeek chat（可选） | OpenAI 兼容接口，流式输出 |
 | 存储 | 进程内存 + JSON 落盘 | 重启自动恢复，无数据库 |
 
 ## 环境配置
 
 - Node.js ≥ 20（实测 24）
-- 一个 DeepSeek API Key（[platform.deepseek.com](https://platform.deepseek.com) 申请；任何 OpenAI 兼容接口均可）
+- **不需要任何密钥**：默认走内置的免费免密钥文本模型；如需更稳的生成质量，可在页面 ⚙ 里填自己的密钥（任何 OpenAI 兼容接口均可）
 
 ```powershell
 cd source
 npm install
-npm run dev            # 打开 http://localhost:3000，点右上角 ⚙ 填密钥即可
+npm run dev            # 打开 http://localhost:3000 即可提问
 ```
 
-密钥两种填法任选：页面上 ⚙ 填（推荐，存浏览器本地，不用改任何文件）；或 `copy .env.example .env.local` 后在文件里填（开发者常驻用法）。
+生成通道可在 `source/.env` 里用 `LLM_PROVIDER` 切换：`free`（默认，免密钥）/ `deepseek`（用自有密钥）。
 
 生产模式：
 
@@ -48,11 +48,14 @@ npm start              # 或 node server.mjs --prod --port 3111
 
 | 变量 | 必填 | 说明 |
 |---|---|---|
-| `DEEPSEEK_API_KEY` | 否 | 生成模型密钥；也可在页面 ⚙ 里填（页面填写优先） |
+| `LLM_PROVIDER` | 否 | `free`（默认，免密钥）/ `deepseek`（自有密钥） |
+| `FREE_BASE_URL` | 否 | 免费模型接口，默认公开的 OpenAI 兼容端点 |
+| `FREE_MODEL` | 否 | 免费模型名，默认 `openai` |
+| `DEEPSEEK_API_KEY` | 否 | 切到 `deepseek` 时使用；也可在页面 ⚙ 里填（页面填写优先） |
 | `DEEPSEEK_BASE_URL` | 否 | 默认官方地址，兼容接口可改 |
-| `DEEPSEEK_MODEL` | 否 | 填**接口模型 id**（如 `deepseek-v4.1-flash`），不是控制台显示名 |
-| `LLM_CHAT_THINKING` | 否 | `off` 关闭思考模式，首字更快 |
 | `DATA_DIR` | 否 | 索引落盘目录，默认 `source/.data` |
+
+> 生成模型固定为对话模型（`deepseek` 通道即 `deepseek-chat`），不支持在页面或环境里换成其他模型。
 
 ## 评审快速体验
 
@@ -65,27 +68,30 @@ npm install
 npm run dev                     # 打开 http://localhost:3000
 ```
 
-点右上角 **⚙**，粘贴 DeepSeek API Key 保存（API 地址默认 DeepSeek 官方，可改成任何 OpenAI 兼容接口）；
-然后上传 `samples\sample-table.docx`，问「服务器采购这一项的金额和负责人分别是什么？」，
+**开箱即用，无需填任何密钥**（默认走内置免费文本模型）。直接上传 `samples\sample-table.docx`，问「服务器采购这一项的金额和负责人分别是什么？」，
 回答应出现 **128.5 万元 / 张伟** 并带角标 **[1]**；点角标可看到第 1 页原文与高亮命中词。
 更多推荐问题见 `samples/README.md`。
 
-> **关于密钥**：密钥只保存在评审自己的浏览器里，不写入服务器、不进代码仓库，也不需要改任何配置文件。如暂无密钥，可先观看 `deliverable/demo-video.mp4`，或联系团队获取临时评审密钥。为什么需要密钥、以及这和「直接用 DeepSeek 官网」有什么区别，见下一节。
+> **想换更快的模型**：点右上角 **⚙** 填自己的 API Key（任何 OpenAI 兼容接口，地址默认 DeepSeek 官方），密钥只存在评审自己的浏览器里，不写入服务器、不进代码仓库。
+> **免费模型的速度**：免费通道有频率限制（约 30 秒 1 次），首字延迟约 10 余秒，属正常现象。
 
 ## 常见问题
 
 **Q：`npm start` 报 `Could not find a production build in the '.next' directory`？**
 生产模式必须先构建：`npm run build` 之后再 `npm start`。另外 dev 与 prod **共用 `.next` 目录**，两者不要同时跑；从 dev 切到 prod 前先重新 `npm run build`。
 
-**Q：上传了文档，但提问后回答一直不出来？**
-说明还没配密钥：点页面右上角 **⚙** 填入 DeepSeek API Key（详见上一节）。
+**Q：提问后回答很慢（十几秒）？**
+默认走的是免费免密钥模型，有频率限制（约 30 秒 1 次）且首字较慢。想更快可点右上角 **⚙** 填自己的密钥切换到 DeepSeek，或在 `source/.env` 里设 `LLM_PROVIDER=deepseek`。
+
+**Q：回答报「免费模型频率限制」之类的错误？**
+等 30 秒再问一次即可；高频演示建议切换到自有密钥。
 
 **Q：3000 端口被占用？**
 `npm run dev -- -p 3111` 换端口；或先 `taskkill /F /IM node.exe` 清掉残留进程。
 
-## 为什么需要密钥，而不是直接用 DeepSeek 官网
+## 和「直接用 DeepSeek 官网传文件问答」的区别
 
-本系统的回答能力由 DeepSeek 大模型 API 提供，因此运行需要一个 API Key（平台免费申请、按量计费）。我们理解这给评审多了一步操作，所以先回答那个自然会有的问题——「直接去官网传文件问不就行了？」
+本系统默认使用免费免密钥模型，**不需要评审准备任何密钥**；如填自己的密钥则切换到 DeepSeek。既然「传文件问答」大模型官网也能做，这里说明本系统的不同：
 
 | | DeepSeek 官网传文件问答 | 本系统 |
 |---|---|---|
@@ -96,7 +102,7 @@ npm run dev                     # 打开 http://localhost:3000
 | 数据隐私 | 整份文件上传云端 | 原文本机解析与索引，只有命中的少量片段发出 |
 | 可扩展性 | 封闭服务 | 源码开放，可自行加 OCR、图谱检索等 |
 
-一句话：**官网回答「文档说了什么」；本系统回答「文档说了什么、在第几页、能不能核对」**。密钥是调用大模型的通行成本（所有同类 RAG 应用都需要），换来的是上面这些官网给不了的可信与可控。
+一句话：**官网回答「文档说了什么」；本系统回答「文档说了什么、在第几页、能不能核对」**。
 
 ## 自测结果（2026-10-23，生产构建实测）
 
