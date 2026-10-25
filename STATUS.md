@@ -11,6 +11,7 @@
 - 技术文档 `deliverable/technical-documentation.pdf`：10 页，覆盖项目概述/需求分析/架构设计/AI 技术方案/核心实现/测试部署/总结展望 + 创新点（技术 5 条 + 应用 3 条）
 - 演示视频：5 分钟自动合成版（playwright 实拍 + SAPI 配音 + ffmpeg 1080p），进 `deliverable/`
 - 新增功能：页面内 ⚙ 填密钥（localStorage + 请求头覆盖，env 兜底），评委零配置文件跑通；README/技术文档/PDF 已同步并推送
+- 生成通道改为双通道并默认零密钥：`free`（免密钥免费模型，零成本，有限流）/ `deepseek`（自有密钥，锁定 chat 模型）；仓库内置 `source/.env` 不含密钥，评委 clone 即用
 
 ## 历史（2026-10-23）
 
