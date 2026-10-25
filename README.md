@@ -54,6 +54,24 @@ npm start              # 或 node server.mjs --prod --port 3111
 | `LLM_CHAT_THINKING` | 否 | `off` 关闭思考模式，首字更快 |
 | `DATA_DIR` | 否 | 索引落盘目录，默认 `source/.data` |
 
+## 评审快速体验
+
+仓库自带两份示例文档（`samples/` 目录），5 分钟可跑通全流程：
+
+```powershell
+git clone https://github.com/Trek-ai/smart-doc-qa
+cd smart-doc-qa\source
+npm install
+copy .env.example .env.local    # 填入 DeepSeek API Key（唯一必填项）
+npm run dev                     # 打开 http://localhost:3000
+```
+
+然后上传 `samples\sample-table.docx`，问「服务器采购这一项的金额和负责人分别是什么？」，
+回答应出现 **128.5 万元 / 张伟** 并带角标 **[1]**；点角标可看到第 1 页原文与高亮命中词。
+更多推荐问题见 `samples/README.md`。
+
+> **关于密钥**：系统唯一外部依赖是 DeepSeek API Key。评审如暂无密钥，可先观看 `deliverable/demo-video.mp4` 演示视频；或联系团队获取临时评审密钥。
+
 ## 自测结果（2026-10-23，生产构建实测）
 
 `node tmp/e2e.mjs` 四个用例全通过（真实模型）：
