@@ -13,7 +13,6 @@ import { deleteDoc, fetchStatus, streamAnswer, uploadFile, type StatusResponse }
 import { formatBytes } from '@/lib/client/format';
 import {
   IconClose,
-  IconFile,
   IconQuote,
   IconSend,
   IconSpinner,
@@ -22,6 +21,26 @@ import {
   IconUpload,
 } from '@/lib/client/icons';
 import { highlightTerms, renderAnswer } from '@/lib/client/render';
+
+/**
+ * 解析本次提问的文档范围。
+ * 支持两种指定方式：提问文本里写 @编号（如「@1 @3 这两份材料有没有冲突」），
+ * 或左侧列表点选/多选；两者同时存在时以 @编号 为准，都没有则默认全部文档。
+ * @returns docIds 命中的文档 id、scopeNumbers 命中的编号、cleanText 去掉 @编号 后的问题
+ */
+function resolveScope(text: string, docs: Doc[], selectedIds: string[]) {
+  const numbers = [...text.matchAll(/@(\d+)/g)].map((match) => Number(match[1]));
+  const picked = numbers.map((num) => docs[num - 1]).filter((doc): doc is Doc => Boolean(doc));
+
+  const ids = picked.length ? picked.map((doc) => doc.id) : selectedIds;
+  const effective = ids.length ? ids : docs.map((doc) => doc.id);
+  const scopeNumbers = effective
+    .map((id) => docs.findIndex((doc) => doc.id === id) + 1)
+    .filter((num) => num > 0);
+
+  const cleanText = text.replace(/@\d+/g, '').replace(/\s{2,}/g, ' ').trim();
+  return { docIds: effective, scopeNumbers, cleanText: cleanText || text };
+}
 
 /** 没有文档时展示的引导问题，纯通用句式，不预设任何文档内容 */
 const STARTERS = ['这份文档主要讲了什么？', '有哪些要求或注意事项？', '把关键数据列出来'];
@@ -53,6 +72,9 @@ export function Workspace() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const docs = status?.docs ?? [];
+  /** 本次提问选中的文档 id；为空表示对全部文档提问 */
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   const refresh = useCallback(async () => {
     try {
@@ -120,11 +142,13 @@ export function Workspace() {
         .slice(-6)
         .map((message) => ({ role: message.role, content: message.content }));
 
+      const { docIds, scopeNumbers, cleanText } = resolveScope(text, docs, selectedIds);
+
       const assistantId = crypto.randomUUID();
       setMessages((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), role: 'user', content: text, createdAt: Date.now() },
-        { id: assistantId, role: 'assistant', content: '', question: text, createdAt: Date.now() },
+        { id: crypto.randomUUID(), role: 'user', content: cleanText, scope: scopeNumbers, createdAt: Date.now() },
+        { id: assistantId, role: 'assistant', content: '', question: cleanText, createdAt: Date.now() },
       ]);
       setQuestion('');
       setBusy(true);
@@ -137,7 +161,7 @@ export function Workspace() {
 
       try {
         await streamAnswer(
-          { question: text, docIds: docs.map((doc) => doc.id), history },
+          { question: cleanText, docIds, history },
           {
             onCitations: (items) => patch((message) => ({ ...message, citations: items })),
             onToken: (chunk) => patch((message) => ({ ...message, content: message.content + chunk })),
@@ -156,8 +180,16 @@ export function Workspace() {
         abortRef.current = null;
       }
     },
-    [busy, docs, messages],
+    [busy, docs, messages, selectedIds],
   );
+
+  /** 点文档=只看这份；按住 Ctrl/⌘ 点击=加入或移出多选 */
+  const toggleDoc = useCallback((id: string, multi: boolean) => {
+    setSelectedIds((prev) => {
+      if (!multi) return prev.length === 1 && prev[0] === id ? [] : [id];
+      return prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id];
+    });
+  }, []);
 
   const remove = useCallback(
     async (doc: Doc) => {
@@ -242,27 +274,65 @@ export function Workspace() {
           ))}
 
           <div className="mt-5 space-y-2">
-            {docs.map((doc) => (
-              <div key={doc.id} className="group flex items-start gap-2 rounded-lg border border-line bg-surface px-3 py-2">
-                <IconFile className="mt-0.5 h-4 w-4 shrink-0 text-ink-faint" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm text-ink" title={doc.name}>
-                    {doc.name}
-                  </p>
-                  <p className="text-xs text-ink-faint">
-                    {doc.pages} 页 · {doc.chunks} 片段 · {formatBytes(doc.size)}
-                  </p>
-                </div>
+            {docs.length ? (
+              <>
                 <button
                   type="button"
-                  onClick={() => void remove(doc)}
-                  title="删除这份文档"
-                  className="shrink-0 text-ink-faint opacity-0 transition group-hover:opacity-100 hover:text-danger"
+                  onClick={() => setSelectedIds([])}
+                  className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-xs transition ${
+                    selectedIds.length === 0
+                      ? 'border-brand bg-brand-wash text-brand-deep'
+                      : 'border-line bg-surface text-ink-soft hover:border-line-strong'
+                  }`}
                 >
-                  <IconTrash className="h-4 w-4" />
+                  <span>全部文档</span>
+                  <span>{docs.length} 份</span>
                 </button>
-              </div>
-            ))}
+                <p className="px-1 text-[11px] leading-5 text-ink-faint">
+                  点文档=只看这一份；Ctrl / ⌘ + 点击=多选；也可在提问里写 @编号
+                </p>
+              </>
+            ) : null}
+            {docs.map((doc, index) => {
+              const selected = selectedSet.has(doc.id);
+              return (
+                <div
+                  key={doc.id}
+                  onClick={(event) => toggleDoc(doc.id, event.ctrlKey || event.metaKey)}
+                  title="点击：只看这一份；Ctrl/⌘+点击：多选"
+                  className={`group flex cursor-pointer items-start gap-2 rounded-lg border px-3 py-2 transition ${
+                    selected ? 'border-brand bg-brand-wash' : 'border-line bg-surface hover:border-line-strong'
+                  }`}
+                >
+                  <span
+                    className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded text-[10px] font-medium ${
+                      selected ? 'bg-brand text-white' : 'bg-line text-ink-soft'
+                    }`}
+                  >
+                    {index + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="break-all text-sm text-ink" title={doc.name}>
+                      {doc.name}
+                    </p>
+                    <p className="text-xs text-ink-faint">
+                      {doc.pages} 页 · {doc.chunks} 片段 · {formatBytes(doc.size)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void remove(doc);
+                    }}
+                    title="删除这份文档"
+                    className="shrink-0 text-ink-faint opacity-0 transition group-hover:opacity-100 hover:text-danger"
+                  >
+                    <IconTrash className="h-4 w-4" />
+                  </button>
+                </div>
+              );
+            })}
             {!docs.length && !uploading.length ? (
               <p className="px-1 text-xs text-ink-faint">还没有文档。上传后这里会列出文件名与页数。</p>
             ) : null}
@@ -296,12 +366,16 @@ export function Workspace() {
 
             {messages.map((message) =>
               message.role === 'user' ? (
-                <p
-                  key={message.id}
-                  className="ml-auto max-w-[85%] whitespace-pre-wrap rounded-2xl bg-brand px-4 py-2.5 text-sm text-white"
-                >
-                  {message.content}
-                </p>
+                <div key={message.id} className="ml-auto max-w-[85%]">
+                  {message.scope?.length ? (
+                    <p className="mb-1 text-right text-[11px] text-ink-faint">
+                      提问范围 {message.scope.map((num) => `#${num}`).join(' ')}
+                    </p>
+                  ) : null}
+                  <p className="whitespace-pre-wrap rounded-2xl bg-brand px-4 py-2.5 text-sm text-white">
+                    {message.content}
+                  </p>
+                </div>
               ) : (
                 <div key={message.id} className="max-w-[90%] rounded-2xl border border-line bg-surface px-4 py-3">
                   <div className="whitespace-pre-wrap text-[15px] leading-7 text-ink">
@@ -330,6 +404,26 @@ export function Workspace() {
               void send(question);
             }}
           >
+            {docs.length ? (
+              <p className="mb-2 flex flex-wrap items-center gap-1.5 text-[11px] text-ink-soft">
+                <span>提问范围：</span>
+                {selectedIds.length ? (
+                  docs
+                    .filter((doc) => selectedSet.has(doc.id))
+                    .map((doc) => (
+                      <span
+                        key={doc.id}
+                        className="max-w-[190px] truncate rounded bg-brand-wash px-1.5 py-0.5 text-brand-deep"
+                        title={doc.name}
+                      >
+                        #{docs.indexOf(doc) + 1} {doc.name}
+                      </span>
+                    ))
+                ) : (
+                  <span className="text-ink-faint">全部 {docs.length} 份</span>
+                )}
+              </p>
+            ) : null}
             <div className="flex items-end gap-2">
               <textarea
                 value={question}
@@ -341,7 +435,11 @@ export function Workspace() {
                   }
                 }}
                 rows={2}
-                placeholder={docs.length ? '就上传的文档提问，Enter 发送，Shift+Enter 换行' : '先上传一份文档'}
+                placeholder={
+                  docs.length
+                    ? '就上传的文档提问，Enter 发送；可用 @1 @3 指定范围'
+                    : '先上传一份文档'
+                }
                 className="max-h-40 min-h-[52px] flex-1 resize-y rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-brand"
               />
               {busy ? (

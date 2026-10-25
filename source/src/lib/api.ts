@@ -35,6 +35,8 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  /** 本条提问命中的文档编号（与左侧列表编号一致），用于界面回显提问范围 */
+  scope?: number[];
   citations?: Citation[];
   /** 产生这条回答的问题，用于引用面板里高亮命中词 */
   question?: string;

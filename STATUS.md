@@ -13,6 +13,8 @@
 - 按需求移除 DeepSeek 方向：`lib/deepseek.ts` 删除、新增 `lib/llm.ts`；`config.ts` 只留免密钥通道；页面设置弹窗与密钥字段全部移除；README/技术文档/PDF 同步更新（免密钥、零配置）
 - 最终形态：生成通道只有免密钥免费模型一种（`FREE_BASE_URL` / `FREE_MODEL` 可换端点），仓库内置 `source/.env`，评委 clone 后零配置可用
 
+- 新增「按范围提问」：文档编号 + 点选/Ctrl 多选 + `@编号` 指定，检索按 docIds 过滤；实测范围外正确拒答，界面 0 报错；截图 `preview/ui-scope-select.png`、`ui-scope-mention.png`
+
 ## 历史（2026-10-23）
 
 从 18「知源」瘦身成独立小工具：去掉摘要/纪要/导出/检索调试/评测/多会话/向量配置，保留解析内核 + BM25 + 流式引用校验。自测 4/4 通过，详见 git log 与 README。
