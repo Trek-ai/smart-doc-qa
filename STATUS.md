@@ -7,11 +7,11 @@
 ## 2026-10-25：参赛材料（AI协同办公工具赛道）
 
 - 建 git 仓库（main 分支），分批提交：初始导入 → README → 技术文档 → 演示视频
-- README 补全参赛四要素：项目介绍 / 技术栈表 / 环境变量模板表 / 团队信息（姓名待作者填）
+- README 补全参赛四要素：项目介绍 / 技术栈表 / 环境变量模板表 / 团队信息（辛嘉炜、罗勇添、林俊宁）
 - 技术文档 `deliverable/technical-documentation.pdf`：10 页，覆盖项目概述/需求分析/架构设计/AI 技术方案/核心实现/测试部署/总结展望 + 创新点（技术 5 条 + 应用 3 条）
 - 演示视频：5 分钟自动合成版（playwright 实拍 + SAPI 配音 + ffmpeg 1080p），进 `deliverable/`
-- 新增功能：页面内 ⚙ 填密钥（localStorage + 请求头覆盖，env 兜底），评委零配置文件跑通；README/技术文档/PDF 已同步并推送
-- 生成通道改为双通道并默认零密钥：`free`（免密钥免费模型，零成本，有限流）/ `deepseek`（自有密钥，锁定 chat 模型）；仓库内置 `source/.env` 不含密钥，评委 clone 即用
+- 按需求移除 DeepSeek 方向：`lib/deepseek.ts` 删除、新增 `lib/llm.ts`；`config.ts` 只留免密钥通道；页面设置弹窗与密钥字段全部移除；README/技术文档/PDF 同步更新（免密钥、零配置）
+- 最终形态：生成通道只有免密钥免费模型一种（`FREE_BASE_URL` / `FREE_MODEL` 可换端点），仓库内置 `source/.env`，评委 clone 后零配置可用
 
 ## 历史（2026-10-23）
 

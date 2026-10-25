@@ -3,7 +3,7 @@
 import { NextResponse } from 'next/server';
 
 import type { ApiError } from '@/lib/api';
-import { activeModel, config, hasChatKey } from '@/lib/config';
+import { activeModel, config } from '@/lib/config';
 import { getStore } from '@/lib/store';
 
 export const runtime = 'nodejs';
@@ -14,8 +14,6 @@ export async function GET() {
   return NextResponse.json({
     docs: await store.allDocs(),
     stats: await store.stats(),
-    hasChatKey: hasChatKey(),
-    provider: config.provider,
     model: activeModel(),
     /** 上传上限，前端据此提前拦下过大的文件 */
     uploadLimitBytes: config.maxUploadBytes,

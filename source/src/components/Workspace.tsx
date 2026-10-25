@@ -9,23 +9,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { ChatMessage, Citation, Doc } from '@/lib/api';
 import { queryKeywords } from '@/lib/bm25';
-import {
-  clearLocalConfig,
-  DEFAULT_LOCAL_CONFIG,
-  deleteDoc,
-  fetchStatus,
-  loadLocalConfig,
-  saveLocalConfig,
-  streamAnswer,
-  uploadFile,
-  type LocalConfig,
-  type StatusResponse,
-} from '@/lib/client/api';
+import { deleteDoc, fetchStatus, streamAnswer, uploadFile, type StatusResponse } from '@/lib/client/api';
 import { formatBytes } from '@/lib/client/format';
 import {
   IconClose,
   IconFile,
-  IconGear,
   IconQuote,
   IconSend,
   IconSpinner,
@@ -64,14 +52,7 @@ export function Workspace() {
   const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  /** 页面里填的密钥/地址（localStorage），优先于服务端环境变量 */
-  const [localCfg, setLocalCfg] = useState<LocalConfig>(loadLocalConfig);
-  const [cfgOpen, setCfgOpen] = useState(false);
-
   const docs = status?.docs ?? [];
-  // 免费模式下无需任何密钥即可生成
-  const hasUsableKey =
-    status?.provider === 'free' || Boolean(status?.hasChatKey) || Boolean(localCfg.apiKey.trim());
 
   const refresh = useCallback(async () => {
     try {
@@ -199,31 +180,12 @@ export function Workspace() {
           <h1 className="text-base font-semibold text-ink">文档问答</h1>
           <p className="text-xs text-ink-faint">上传 Word / PDF / 文本，提问后每条结论都能点回原文页码</p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-ink-soft">
-          <span>
-            {status
-              ? `${status.docs.length} 份文档 · ${status.stats.chunks} 个片段 · 模型 ${status.model}${status.provider === 'free' ? '（免费）' : ''}`
-              : '正在读取…'}
-          </span>
-          <button
-            type="button"
-            onClick={() => setCfgOpen(true)}
-            title="配置 API 密钥"
-            className="rounded p-1 text-ink-faint transition hover:bg-brand-wash hover:text-brand-deep"
-          >
-            <IconGear className="h-4 w-4" />
-          </button>
+        <div className="text-xs text-ink-soft">
+          {status
+            ? `${status.docs.length} 份文档 · ${status.stats.chunks} 个片段 · 模型 ${status.model}（免费免密钥）`
+            : '正在读取…'}
         </div>
       </header>
-
-      {status && !hasUsableKey ? (
-        <p className="flex flex-wrap items-center gap-x-2 border-b border-line bg-amber-50 px-5 py-2 text-xs text-warn">
-          <span>还没配置密钥：上传和检索可用，但不会生成回答。</span>
-          <button type="button" onClick={() => setCfgOpen(true)} className="underline hover:opacity-70">
-            点这里填入 DeepSeek API Key
-          </button>
-        </p>
-      ) : null}
 
       {errors.length ? (
         <div className="flex items-start gap-3 border-b border-line bg-red-50 px-5 py-2 text-xs text-danger">
@@ -425,69 +387,6 @@ export function Workspace() {
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm leading-7 text-ink-soft">
               {highlightTerms(active.citation.text, keywords)}
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {/* 密钥设置弹窗 */}
-      {cfgOpen ? (
-        <div className="fixed inset-0 z-30 flex items-center justify-center bg-ink/20 p-4" onClick={() => setCfgOpen(false)}>
-          <div
-            className="w-full max-w-md rounded-xl border border-line bg-surface p-5 shadow-lg"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium text-ink">API 设置</p>
-                <p className="mt-1 text-xs text-ink-faint">
-                  留空即使用内置免费模型（无需密钥）；填自己的密钥则改用 DeepSeek，仅保存在本浏览器。
-                </p>
-              </div>
-              <button type="button" onClick={() => setCfgOpen(false)} className="shrink-0 text-ink-faint hover:text-ink">
-                <IconClose className="h-4 w-4" />
-              </button>
-            </div>
-            <label className="mt-4 block text-xs text-ink-soft">
-              API Key（必填）
-              <input
-                type="password"
-                value={localCfg.apiKey}
-                onChange={(event) => setLocalCfg((prev) => ({ ...prev, apiKey: event.target.value }))}
-                placeholder="留空即使用内置评审密钥"
-                className="mt-1 w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-brand"
-              />
-            </label>
-            <label className="mt-3 block text-xs text-ink-soft">
-              API 地址（默认 DeepSeek 官方，任何 OpenAI 兼容接口都可改）
-              <input
-                type="text"
-                value={localCfg.baseUrl}
-                onChange={(event) => setLocalCfg((prev) => ({ ...prev, baseUrl: event.target.value }))}
-                className="mt-1 w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-brand"
-              />
-            </label>
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  clearLocalConfig();
-                  setLocalCfg({ ...DEFAULT_LOCAL_CONFIG });
-                }}
-                className="rounded-lg border border-line px-3 py-1.5 text-xs text-ink-soft transition hover:border-danger hover:text-danger"
-              >
-                清空
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  saveLocalConfig(localCfg);
-                  setCfgOpen(false);
-                }}
-                className="rounded-lg bg-brand px-4 py-1.5 text-xs text-white transition hover:bg-brand-deep"
-              >
-                保存
-              </button>
             </div>
           </div>
         </div>

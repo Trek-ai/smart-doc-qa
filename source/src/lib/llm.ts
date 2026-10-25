@@ -1,9 +1,9 @@
 /**
- * DeepSeek 客户端：流式问答。
- * 密钥只从环境变量读取；调用带超时、错误包装与外部中断支持。
+ * 生成模型客户端：公开免密钥的 OpenAI 兼容接口，流式问答。
+ * 不需要密钥；调用带整体超时、错误包装与外部中断支持。
  */
 
-import { config, llmOptions } from './config';
+import { config } from './config';
 
 export interface ChatTurn {
   role: 'system' | 'user' | 'assistant';
@@ -14,74 +14,44 @@ export interface StreamChunk {
   text: string;
 }
 
-export class MissingKeyError extends Error {
-  readonly code = 'NO_KEY';
-  constructor() {
-    super('还没有配置 DEEPSEEK_API_KEY，请在 source/.env.local 里填好再试。');
-    this.name = 'MissingKeyError';
-  }
-}
-
-function ensureKey(): string {
-  if (!config.deepseek.apiKey) throw new MissingKeyError();
-  return config.deepseek.apiKey;
-}
-
 interface StreamOptions {
   temperature?: number;
   maxTokens?: number;
   /** 外部中断信号，用户点「停止生成」时触发 */
   signal?: AbortSignal;
-  /** 请求级覆盖（页面里填的密钥/地址/模型）；缺省时退回环境变量 */
-  apiKey?: string;
-  baseUrl?: string;
-  model?: string;
 }
 
 /**
  * 流式生成。
  * @yields 增量文本
- * @throws MissingKeyError / Error
+ * @throws Error 接口不可用或超时
  */
 export async function* streamChat(
   turns: ChatTurn[],
   options: StreamOptions = {},
 ): AsyncGenerator<StreamChunk> {
-  // 免费模式只在「既没有请求级密钥、也没有自有密钥」时生效
-  const useFree = !options.apiKey?.trim() && !config.deepseek.apiKey && config.provider === 'free';
-  const apiKey = options.apiKey?.trim() || config.deepseek.apiKey;
-  if (!apiKey && !useFree) throw new MissingKeyError();
-  const baseUrl = useFree
-    ? config.free.baseUrl
-    : (options.baseUrl?.trim() || config.deepseek.baseUrl).replace(/\/+$/, '');
-  const model = useFree ? config.free.model : config.deepseek.model;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), config.requestTimeoutMs);
   const onAbort = () => controller.abort();
   options.signal?.addEventListener('abort', onAbort);
 
   try {
-    const response = await fetch(`${baseUrl}/chat/completions`, {
+    const response = await fetch(`${config.llm.baseUrl}/chat/completions`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // 免费接口不需要密钥，就不带 Authorization
-        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model,
+        model: config.llm.model,
         messages: turns,
         stream: true,
         temperature: options.temperature ?? 0.2,
         max_tokens: options.maxTokens ?? 4096,
-        // 部分兼容接口不认识 reasoning_effort，只有显式要求关闭思考时才带上
-        ...(llmOptions.chatWithoutThinking ? { reasoning_effort: 'none' } : {}),
       }),
       signal: controller.signal,
     });
 
     if (!response.ok || !response.body) {
       const detail = await response.text().catch(() => '');
+      // 免费接口的限流提示原样带出，便于界面给出可读解释
       throw new Error(`模型服务返回 ${response.status}${detail ? `：${detail.slice(0, 200)}` : ''}`);
     }
 

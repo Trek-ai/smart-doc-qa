@@ -5,7 +5,7 @@
  */
 
 import type { ChatMessage, Citation, SSEEvent } from '@/lib/api';
-import { streamChat, type ChatTurn } from '@/lib/deepseek';
+import { streamChat, type ChatTurn } from '@/lib/llm';
 import { buildContextBlock, buildQaUserPrompt, NO_CONTEXT_ANSWER, QA_SYSTEM_PROMPT } from '@/lib/prompts';
 import { retrieve } from '@/lib/retrieve';
 import { getStore } from '@/lib/store';
@@ -45,11 +45,6 @@ export async function POST(request: Request) {
   const docIds = Array.isArray(body.docIds) ? body.docIds : [];
   const chunks = await getStore().chunksOf(docIds);
 
-  // 页面里填的密钥/地址/模型：随请求头传入，优先于服务端环境变量
-  const overrideKey = request.headers.get('x-ds-key')?.trim() ?? '';
-  const overrideBaseUrl = request.headers.get('x-ds-base-url')?.trim() ?? '';
-  // 模型固定为 chat 模型：不接受请求头覆盖
-
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const send = (event: SSEEvent) => controller.enqueue(sse(event));
@@ -78,8 +73,6 @@ export async function POST(request: Request) {
         }));
         send({ type: 'citations', items: citations });
 
-        // 免费模式无需密钥；若强制 deepseek 又没密钥，streamChat 会抛出 MissingKeyError 由下方统一转成错误事件
-
         const history = (body.history ?? [])
           .filter((m) => m.role === 'user' || m.role === 'assistant')
           .slice(-HISTORY_LIMIT)
@@ -93,11 +86,7 @@ export async function POST(request: Request) {
 
         const filter = createCitationFilter(citations.length);
 
-        for await (const chunk of streamChat(turns, {
-          signal: request.signal,
-          apiKey: overrideKey || undefined,
-          baseUrl: overrideBaseUrl || undefined,
-        })) {
+        for await (const chunk of streamChat(turns, { signal: request.signal })) {
           const safe = filter.push(chunk.text);
           if (safe) send({ type: 'token', text: safe });
         }
